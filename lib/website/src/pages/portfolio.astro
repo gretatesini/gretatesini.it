@@ -1,0 +1,468 @@
+---
+import BaseLayout from "@layouts/BaseLayout.astro";
+
+interface Project {
+  id: number;
+  title: string;
+  category: string;
+  subcategory: string;
+  description: string;
+  year: string;
+  aspect: "portrait" | "landscape" | "square";
+  bg: string;
+}
+
+const projects: Project[] = [
+  {
+    id: 1,
+    title: "Brand Voice & Tone of Voice",
+    category: "copywriting",
+    subcategory: "Brand",
+    description:
+      "Definizione dell'identità verbale per un brand luxury lifestyle. Dalla voce al glossario editoriale.",
+    year: "2024",
+    aspect: "portrait",
+    bg: "linear-gradient(160deg, #1a1a2e 0%, #0f3460 100%)",
+  },
+  {
+    id: 2,
+    title: "Campagna Social Media Q4",
+    category: "social",
+    subcategory: "Social Media",
+    description:
+      "Piano editoriale e copy per 90 giorni di attività su Instagram e TikTok per brand beauty.",
+    year: "2024",
+    aspect: "landscape",
+    bg: "linear-gradient(160deg, #f5e6d3 0%, #c9956c 100%)",
+  },
+  {
+    id: 3,
+    title: "Newsletter Series — Moda",
+    category: "email",
+    subcategory: "Email Marketing",
+    description:
+      "Sequenza di 12 email per e-commerce fashion. Open rate +34% rispetto alla baseline del brand.",
+    year: "2024",
+    aspect: "portrait",
+    bg: "linear-gradient(160deg, #2c2c2c 0%, #4a4a4a 100%)",
+  },
+  {
+    id: 4,
+    title: "Landing Page Wellness",
+    category: "copywriting",
+    subcategory: "Conversion Copy",
+    description:
+      "Copy per landing page di lancio corso online. Conversion rate 3x rispetto alla versione precedente.",
+    year: "2024",
+    aspect: "square",
+    bg: "linear-gradient(160deg, #e8e0d5 0%, #c5b8a8 100%)",
+  },
+  {
+    id: 5,
+    title: "Content Strategy Editoriale",
+    category: "strategy",
+    subcategory: "Content Strategy",
+    description:
+      "Architettura dei contenuti per rivista digitale lifestyle. Piano a 6 mesi su 3 canali.",
+    year: "2023",
+    aspect: "landscape",
+    bg: "linear-gradient(160deg, #1e3a3a 0%, #2d5a5a 100%)",
+  },
+  {
+    id: 6,
+    title: "Script Video Advertising",
+    category: "copywriting",
+    subcategory: "Advertising",
+    description: "Sceneggiatura per campagna video di un brand sostenibile. 4 video, 2 formati.",
+    year: "2023",
+    aspect: "portrait",
+    bg: "linear-gradient(160deg, #3d2b1f 0%, #6b4c36 100%)",
+  },
+  {
+    id: 7,
+    title: "Blog Editoriale Food & Life",
+    category: "strategy",
+    subcategory: "Content Writing",
+    description:
+      "Serie di 24 articoli SEO per brand food & lifestyle. Traffico organico +180% in 6 mesi.",
+    year: "2023",
+    aspect: "square",
+    bg: "linear-gradient(160deg, #f0e8d0 0%, #d4a96a 100%)",
+  },
+  {
+    id: 8,
+    title: "Manifesto di Brand",
+    category: "copywriting",
+    subcategory: "Brand",
+    description:
+      "Testo fondativo per startup tech. Dal posizionamento alla narrativa istituzionale.",
+    year: "2022",
+    aspect: "landscape",
+    bg: "linear-gradient(160deg, #0d0d0d 0%, #2a2a2a 100%)",
+  },
+];
+
+const categories = [
+  { key: "all", label: "Tutti" },
+  { key: "copywriting", label: "Copywriting" },
+  { key: "social", label: "Social Media" },
+  { key: "email", label: "Email Marketing" },
+  { key: "strategy", label: "Content Strategy" },
+];
+---
+
+<BaseLayout headerTitle="Portfolio" headerDescription="I miei lavori">
+  <div class="portfolio-page">
+    <section class="portfolio-header">
+      <div class="container">
+        <p class="portfolio-eyebrow">I miei lavori</p>
+        <h1 class="portfolio-title">Portfolio</h1>
+        <p class="portfolio-subtitle"></p>
+      </div>
+    </section>
+
+    <div class="portfolio-filters-wrap">
+      <div class="container">
+        <div class="portfolio-filters" role="group" aria-label="Filtra per categoria">
+          {
+            categories.map((cat) => (
+              <button
+                class:list={["filter-btn", { active: cat.key === "all" }]}
+                data-filter={cat.key}
+                aria-pressed={cat.key === "all" ? "true" : "false"}
+              >
+                {cat.label}
+              </button>
+            ))
+          }
+        </div>
+      </div>
+    </div>
+
+    <section class="portfolio-grid-section">
+      <div class="container">
+        <div class="portfolio-grid" id="portfolio-grid">
+          {
+            projects.map((project) => (
+              <article
+                class:list={["portfolio-item", `aspect-${project.aspect}`]}
+                data-category={project.category}
+                aria-label={project.title}
+              >
+                <div class="item-image" style={`background: ${project.bg}`}>
+                  <div class="item-overlay">
+                    <p class="item-description">{project.description}</p>
+                    <span class="item-arrow" aria-hidden="true">
+                      →
+                    </span>
+                  </div>
+                </div>
+                <div class="item-meta">
+                  <span class="item-tag">{project.subcategory}</span>
+                  <span class="item-year">{project.year}</span>
+                </div>
+                <h2 class="item-title">{project.title}</h2>
+              </article>
+            ))
+          }
+        </div>
+      </div>
+    </section>
+  </div>
+</BaseLayout>
+
+<style>
+  .portfolio-page {
+    background: #f7f5f2;
+  }
+
+  /* ── Header ── */
+  .portfolio-header {
+    padding: 5rem 0 2.5rem;
+  }
+
+  .portfolio-eyebrow {
+    font-size: 0.7rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: #999;
+    margin: 0 0 1.25rem 0;
+    font-weight: 600;
+  }
+
+  .portfolio-title {
+    font-family: "Coconat-Regular", system-ui, sans-serif;
+    font-size: clamp(3.5rem, 9vw, 6.5rem);
+    line-height: 0.95;
+    color: #111;
+    margin: 0 0 1.75rem 0;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+  }
+
+  .portfolio-subtitle {
+    font-size: 1rem;
+    color: #777;
+    max-width: 44ch;
+    margin: 0;
+    line-height: 1.65;
+  }
+
+  /* ── Filters ── */
+  .portfolio-filters-wrap {
+    padding: 0 0 3rem;
+    background: #fff;
+    border-top: 1px solid #e2ddd5;
+  }
+
+  .portfolio-filters {
+    display: flex;
+    align-items: center;
+    gap: 2.75rem;
+    padding-top: 1.5rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .portfolio-filters::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-btn {
+    background: none;
+    border: none;
+    padding: 0.2rem 0 0.35rem;
+    font-size: 0.68rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #b0a898;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: 500;
+    white-space: nowrap;
+    position: relative;
+    transition: color 0.2s ease;
+  }
+
+  .filter-btn::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 0;
+    height: 1px;
+    background: #111;
+    transition: width 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .filter-btn:hover {
+    color: #555;
+  }
+
+  .filter-btn.active {
+    color: #111;
+    font-weight: 600;
+  }
+
+  .filter-btn.active::after {
+    width: 100%;
+  }
+
+  /* ── Grid ── */
+  .portfolio-grid-section {
+    padding: 0 0 6rem;
+  }
+
+  .portfolio-grid {
+    columns: 2;
+    column-gap: 2rem;
+  }
+
+  .portfolio-item {
+    break-inside: avoid;
+    margin-bottom: 2rem;
+    cursor: pointer;
+  }
+
+  .portfolio-item.hidden {
+    display: none;
+  }
+
+  /* ── Card image ── */
+  .item-image {
+    width: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .aspect-portrait .item-image {
+    aspect-ratio: 3 / 4;
+  }
+  .aspect-landscape .item-image {
+    aspect-ratio: 4 / 3;
+  }
+  .aspect-square .item-image {
+    aspect-ratio: 1 / 1;
+  }
+
+  /* ── Overlay ── */
+  .item-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.72);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 2rem;
+    opacity: 0;
+    transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .portfolio-item:hover .item-overlay,
+  .portfolio-item:focus-within .item-overlay {
+    opacity: 1;
+  }
+
+  .item-description {
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 0.9rem;
+    line-height: 1.55;
+    margin: 0 0 1rem 0;
+    transform: translateY(10px);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .portfolio-item:hover .item-description {
+    transform: translateY(0);
+  }
+
+  .item-arrow {
+    color: #fff;
+    font-size: 1.1rem;
+    display: block;
+    opacity: 0.7;
+    transform: translateX(-6px);
+    transition: transform 0.25s ease;
+  }
+
+  .portfolio-item:hover .item-arrow {
+    transform: translateX(0);
+    opacity: 1;
+  }
+
+  /* ── Card meta ── */
+  .item-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.9rem;
+  }
+
+  .item-tag {
+    font-size: 0.65rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #999;
+    font-weight: 600;
+  }
+
+  .item-year {
+    font-size: 0.72rem;
+    color: #bbb;
+  }
+
+  .item-title {
+    font-size: clamp(1rem, 1.8vw, 1.2rem);
+    font-weight: 600;
+    color: #111;
+    margin: 0.35rem 0 0 0;
+    line-height: 1.3;
+    letter-spacing: -0.015em;
+  }
+
+  /* ── Filter animation ── */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(14px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .portfolio-item {
+    animation: fadeInUp 0.5s ease both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .portfolio-item {
+      animation: none;
+    }
+    .item-description,
+    .item-arrow,
+    .filter-btn,
+    .item-overlay {
+      transition: none;
+    }
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .portfolio-header {
+      padding: 3.5rem 0 2rem;
+    }
+    .portfolio-grid {
+      columns: 2;
+      column-gap: 1.25rem;
+    }
+    .portfolio-grid-section {
+      padding: 0 0 4rem;
+    }
+  }
+
+  @media (max-width: 600px) {
+    .portfolio-header {
+      padding: 2.5rem 0 1.5rem;
+    }
+    .portfolio-grid {
+      columns: 1;
+    }
+    .portfolio-filters-wrap {
+      padding: 0 0 2rem;
+    }
+    .portfolio-filters {
+      gap: 1.75rem;
+    }
+    .item-overlay {
+      padding: 1.25rem;
+    }
+  }
+</style>
+
+<script>
+  const filterBtns = document.querySelectorAll<HTMLButtonElement>(".filter-btn");
+  const items = document.querySelectorAll<HTMLElement>(".portfolio-item");
+
+  filterBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const filter = btn.dataset.filter;
+
+      filterBtns.forEach((b) => {
+        b.classList.remove("active");
+        b.setAttribute("aria-pressed", "false");
+      });
+      btn.classList.add("active");
+      btn.setAttribute("aria-pressed", "true");
+
+      items.forEach((item) => {
+        if (filter === "all" || item.dataset.category === filter) {
+          item.classList.remove("hidden");
+        } else {
+          item.classList.add("hidden");
+        }
+      });
+    });
+  });
+</script>

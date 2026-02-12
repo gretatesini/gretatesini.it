@@ -1,0 +1,23 @@
+@font-face {
+  font-family: "Coconat-Regular";
+  src: url("/fonts/Coconat-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+}
+
+.logo-text-navbar {
+  margin: 0;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  height: 100%;
+  font-size: 2.2rem;
+  font-family: "Coconat-Regular", sans-serif;
+}
+
+.site-header {
+  border-bottom: 0px !important;
+}
