@@ -1,0 +1,207 @@
+---
+import Button from "@walle/components/elements/Button.astro";
+
+export interface Props {
+  title: string;
+  subtitle: string;
+  body: string;
+  ctaText: string;
+  ctaHref: string;
+  imgSrc: string;
+  imgAlt: string;
+  cta2Text?: string;
+  cta2Href?: string;
+  animate?: boolean;
+}
+
+const {
+  title,
+  subtitle,
+  body,
+  ctaText,
+  ctaHref,
+  imgSrc,
+  imgAlt,
+  cta2Text,
+  cta2Href,
+  animate = true,
+} = Astro.props;
+---
+
+<section class:list={["hero-two-column", { "has-entrance": animate }]}>
+  <div class="hero-inner">
+    <div class="hero-left">
+      <h1 class="hero-title">{title}</h1>
+      <p class="hero-subtitle">{subtitle}</p>
+      <p class="hero-body">{body}</p>
+      <div class="hero-cta">
+        <Button text={ctaText} link={ctaHref} type="primary" size="small" />
+        {
+          cta2Text && cta2Href && (
+            <Button text={cta2Text} link={cta2Href} type="primary" outline={true} size="small" />
+          )
+        }
+      </div>
+    </div>
+
+    <div class="hero-right">
+      <img src={imgSrc} alt={imgAlt} loading="lazy" decoding="async" />
+    </div>
+  </div>
+</section>
+
+<style>
+  .hero-two-column {
+    width: 100%;
+    height: calc(100dvh - 70px);
+    max-height: calc(100dvh - 70px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    overflow: hidden;
+    background: var(--bg, var(--white));
+    color: var(--text, #0b1020);
+    box-sizing: border-box;
+  }
+
+  .hero-inner {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--space-xl) var(--space-3xl);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-3xl);
+    align-items: center;
+    box-sizing: border-box;
+  }
+
+  .hero-left {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+  }
+
+  .hero-title {
+    font-family:
+      "Coconat-Regular",
+      system-ui,
+      -apple-system,
+      sans-serif;
+    font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+    line-height: 1.15;
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .hero-subtitle {
+    color: var(--gray-dark);
+    margin: 0;
+    font-size: clamp(0.9rem, 1.5vw, 1.05rem);
+    font-weight: 500;
+  }
+
+  .hero-body {
+    font-size: clamp(0.95rem, 1.5vw, 1.05rem);
+    line-height: 1.6;
+    margin: 0;
+    color: var(--gray-dark);
+    max-width: 50ch;
+  }
+
+  .hero-cta {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    margin-top: var(--space-xs);
+  }
+
+  .hero-right {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    max-height: 100%;
+  }
+
+  .hero-right img {
+    width: 100%;
+    height: auto;
+    max-height: calc(100dvh - 70px - var(--space-4xl));
+    object-fit: cover;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--box-shadow);
+  }
+
+  @media (max-width: 900px) {
+    .hero-two-column {
+      height: auto;
+      max-height: none;
+      min-height: calc(100dvh - 70px);
+      overflow-y: auto;
+    }
+
+    .hero-inner {
+      grid-template-columns: 1fr;
+      gap: var(--space-xl);
+      padding: var(--space-xl) var(--space-xl);
+    }
+
+    .hero-right img {
+      max-height: 40vh;
+      border-radius: var(--radius-md);
+    }
+  }
+
+  @media (max-width: 600px) {
+    .hero-inner {
+      padding: var(--space-lg) var(--space-lg);
+      gap: var(--space-lg);
+    }
+
+    .hero-right img {
+      max-height: 35vh;
+    }
+  }
+
+  /* Entrance animation */
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .has-entrance .hero-left {
+    opacity: 0;
+    animation: fadeInUp 0.6s ease-out 0.1s forwards;
+  }
+
+  .has-entrance .hero-right {
+    opacity: 0;
+    animation: fadeIn 0.7s ease-out 0.35s forwards;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .has-entrance .hero-left,
+    .has-entrance .hero-right {
+      opacity: 1;
+      animation: none;
+    }
+  }
+</style>

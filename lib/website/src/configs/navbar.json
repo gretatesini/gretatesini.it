@@ -1,0 +1,13 @@
+{
+  "logo": {
+    "title": "Greta Tesini",
+    "url": "/",
+    "cssClasses": "logo-text-navbar"
+  },
+  "items": [
+    {
+      "icon": "fa:linkedin",
+      "url": "https://www.linkedin.com/in/greta-tesini/"
+    }
+  ]
+}
