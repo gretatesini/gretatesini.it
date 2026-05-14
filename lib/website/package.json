@@ -19,7 +19,7 @@
     "node": ">=22.0.0"
   },
   "dependencies": {
-    "@astrojs/mdx": "^5.0.4",
+    "@astrojs/mdx": "^5.0.5",
     "@astrojs/sitemap": "^3.7.2",
     "@iconify-json/fa": "^1.2.2",
     "@iconify-json/mdi": "^1.2.3",
