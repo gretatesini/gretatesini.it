@@ -10,7 +10,7 @@ inputs:
   publish_dir:
     description: "Directory to publish"
     required: true
-    default: "./lib/website/dist"
+    default: "./dist"
   cname:
     description: "Custom domain for GitHub Pages"
     required: false
@@ -20,21 +20,19 @@ runs:
   using: "composite"
   steps:
     - name: Checkout your repository using git
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version-file: lib/website/.nvmrc
-        cache: "yarn"
-        cache-dependency-path: lib/website/yarn.lock
+        node-version-file: .nvmrc
     - name: Install dependencies
       shell: bash
-      working-directory: lib/website
       run: |
-        yarn install --frozen-lockfile
+        corepack enable
+        corepack prepare --activate
+        yarn install --immutable
     - name: Build Astro site
       shell: bash
-      working-directory: lib/website
       run: |
         yarn build
     - name: Deploy to GitHub Pages

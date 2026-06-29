@@ -7,20 +7,18 @@ runs:
   using: "composite"
   steps:
     - name: Checkout your repository using git
-      uses: actions/checkout@v5
+      uses: actions/checkout@v7
     - name: Set up Node.js
       uses: actions/setup-node@v4
       with:
-        node-version-file: lib/website/.nvmrc
-        cache: "yarn"
-        cache-dependency-path: lib/website/yarn.lock
+        node-version-file: .nvmrc
     - name: Install dependencies
       shell: bash
-      working-directory: lib/website
       run: |
-        yarn install --frozen-lockfile
+        corepack enable
+        corepack prepare --activate
+        yarn install --immutable
     - name: Run Astro Lint
       shell: bash
-      working-directory: lib/website
       run: |
         yarn lint
