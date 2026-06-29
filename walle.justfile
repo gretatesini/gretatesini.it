@@ -1,7 +1,4 @@
-cli_filename := "./lib/scripts/@walle/cli.sh"
-website_dir := "./lib/website"
-infrastructure_dir := "./lib/infrastructure"
-scripts_dir := "./lib/scripts"
+cli_filename := "./scripts/@walle/cli.sh"
 
 # Setup the project
 setup:
@@ -13,13 +10,17 @@ walle *args:
 
 # Walle update design system
 walle-update *args:
-    curl -fsSL https://raw.githubusercontent.com/FabrizioCafolla/walle-design-system/main/lib/scripts/@walle/cli.sh -o {{cli_filename}}
+    curl -fsSL https://raw.githubusercontent.com/FabrizioCafolla/walle-design-system/main/scripts/@walle/cli.sh -o {{cli_filename}}
     chmod +x {{cli_filename}}
     just walle update {{args}}
 
-# Run yarn commands in the website directory
+# Run yarn commands
 yarn *args:
-    cd {{website_dir}} && yarn {{args}}
+    yarn {{args}}
+
+# Validate consumer configs against the published JSON Schemas
+validate-configs:
+    node ./scripts/@walle/validate-configs.mjs
 
 # Start development server
 dev:
