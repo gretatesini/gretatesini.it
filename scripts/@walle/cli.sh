@@ -97,7 +97,7 @@ module_seed_paths() {
   ai) echo "" ;;
   backend) echo "src/pages/api/health.ts src/pages/api/echo.ts src/middleware.ts" ;;
   infrastructure) echo "infrastructure/main.tf infrastructure/variables.tf infrastructure/providers.tf infrastructure/outputs.tf infrastructure/README.md infrastructure/.gitignore" ;;
-  devcontainer) echo ".devcontainer/devcontainer.json .devcontainer/docker-compose.project.yml .devcontainer/scripts/setup-devcontainer.project.sh" ;;
+  devcontainer) echo ".devcontainer/devcontainer.json .devcontainer/docker-compose.project.yml .devcontainer/scripts/setup-devcontainer.project.sh vscode-dev-setup-cli.sh" ;;
   esac
 }
 
