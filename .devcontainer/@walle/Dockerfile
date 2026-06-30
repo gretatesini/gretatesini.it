@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-COPY lib/website/package.json lib/website/yarn.lock ./lib/website/
+COPY package.json yarn.lock ./
 
 RUN yarn install --frozen-lockfile && \
     npm install -g rust-just

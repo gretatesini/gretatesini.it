@@ -5,5 +5,5 @@ default:
     just --list
 
 import:
-    chmod +x ./lib/scripts/import-database.sh
-    ./lib/scripts/import-database.sh
+    chmod +x ./scripts/import-database.sh
+    ./scripts/import-database.sh

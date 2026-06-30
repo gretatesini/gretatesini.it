@@ -4,12 +4,13 @@ labelPRBasedOnFilePath:
     - .github/**/*
 
   dependencies:
-    - lib/website/package.json
-    - lib/website/pnpm-lock.yaml
+    - package.json
+    - yarn.lock
 
   website:
-    - lib/website/*
-    - lib/website/**/*
+    - src/**/*
+    - public/**/*
+    - astro.config.mjs
 
 firstPRWelcomeComment: >
   Thanks for opening this pull request! Please check out our contributing guidelines.
