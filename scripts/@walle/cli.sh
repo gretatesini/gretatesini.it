@@ -84,7 +84,7 @@ module_managed_paths() {
   ai) echo ".claude/skills/@walle" ;;
   backend) echo "" ;;
   infrastructure) echo "" ;;
-  devcontainer) echo "" ;;
+  devcontainer) echo ".devcontainer/Dockerfile .devcontainer/docker-compose.yml .devcontainer/scripts/setup-devcontainer.sh .devcontainer/configs/.zshrc .devcontainer/configs/.aws/.gitignore" ;;
   esac
 }
 
@@ -97,7 +97,7 @@ module_seed_paths() {
   ai) echo "" ;;
   backend) echo "src/pages/api/health.ts src/pages/api/echo.ts src/middleware.ts" ;;
   infrastructure) echo "infrastructure/main.tf infrastructure/variables.tf infrastructure/providers.tf infrastructure/outputs.tf infrastructure/README.md infrastructure/.gitignore" ;;
-  devcontainer) echo ".devcontainer/Dockerfile .devcontainer/devcontainer.json .devcontainer/docker-compose.yml .devcontainer/docker-compose.project.yml .devcontainer/scripts/setup-devcontainer.sh .devcontainer/scripts/setup-devcontainer.project.sh .devcontainer/configs/.zshrc .devcontainer/configs/.aws/.gitignore" ;;
+  devcontainer) echo ".devcontainer/devcontainer.json .devcontainer/docker-compose.project.yml .devcontainer/scripts/setup-devcontainer.project.sh" ;;
   esac
 }
 
@@ -213,22 +213,32 @@ plan_seed_path() {
   print_plan "+ ${dst} (seed, once)"
 }
 
-# Seed full .devcontainer/ structure at init if DEVCONTAINER_ENABLED=1.
-# Each file is written only if absent — existing vscode-dev-setup files are preserved.
+# Sync BASE devcontainer files (MANAGED — overwritten on every update).
+# Sourced from seeds/devcontainer/ because the repo's own .devcontainer/ is walle-specific.
+# DRY_RUN-aware: calls plan_path instead of sync_path when DRY_RUN=1.
+sync_devcontainer() {
+  local source_dir="$1" target_dir="$2"
+  [ "$DEVCONTAINER_ENABLED" = "1" ] || return 0
+  for rel in $(module_managed_paths "devcontainer"); do
+    if [ "$DRY_RUN" = "1" ]; then
+      plan_path "${source_dir}/seeds/devcontainer/${rel}" "${target_dir}/${rel}"
+    else
+      sync_path "${source_dir}/seeds/devcontainer/${rel}" "${target_dir}/${rel}"
+    fi
+  done
+}
+
+# Seed PROJECT devcontainer files (write-once — only at init/add if absent).
+# DRY_RUN-aware: calls plan_seed_path when DRY_RUN=1.
 seed_devcontainer() {
   local source_dir="$1" target_dir="$2"
   [ "$DEVCONTAINER_ENABLED" = "1" ] || return 0
   for rel in $(module_seed_paths "devcontainer"); do
-    seed_path "${source_dir}/seeds/devcontainer/${rel}" "${target_dir}/${rel}"
-  done
-}
-
-# Dry-run report for devcontainer seed.
-plan_devcontainer() {
-  local source_dir="$1" target_dir="$2"
-  [ "$DEVCONTAINER_ENABLED" = "1" ] || return 0
-  for rel in $(module_seed_paths "devcontainer"); do
-    plan_seed_path "${source_dir}/seeds/devcontainer/${rel}" "${target_dir}/${rel}"
+    if [ "$DRY_RUN" = "1" ]; then
+      plan_seed_path "${source_dir}/seeds/devcontainer/${rel}" "${target_dir}/${rel}"
+    else
+      seed_path "${source_dir}/seeds/devcontainer/${rel}" "${target_dir}/${rel}"
+    fi
   done
 }
 
@@ -469,7 +479,8 @@ init() {
     print_plan "init plan for '${PROJECT_NAME}' (modules: ${MODULES_CSV}, version: ${WALLE_VERSION})"
     print_plan "+ ${project_dir}/ (scaffold from template/)"
     for m in "${modules[@]}"; do sync_module "$SOURCE_DIR" "$project_dir" "$m"; done
-    plan_devcontainer "$SOURCE_DIR" "$project_dir"
+    sync_devcontainer "$SOURCE_DIR" "$project_dir"
+    seed_devcontainer "$SOURCE_DIR" "$project_dir"
     print_info "Dry-run: no files written."
     return 0
   fi
@@ -479,6 +490,7 @@ init() {
   print_info "Scaffolding ${PROJECT_NAME} from template..."
   cp -a "${SOURCE_DIR}/template/." "$project_dir"/
   for m in "${modules[@]}"; do sync_module "$SOURCE_DIR" "$project_dir" "$m"; done
+  sync_devcontainer "$SOURCE_DIR" "$project_dir"
   seed_devcontainer "$SOURCE_DIR" "$project_dir"
   write_manifest "$project_dir" "$PROJECT_NAME" "${modules[@]}"
   print_info "Project ${PROJECT_NAME} initialized in ${DIR_PATH}."
@@ -515,12 +527,16 @@ update() {
   if [ "$DRY_RUN" = "1" ]; then
     print_plan "update plan for '${MF_NAME}' (${MF_VERSION} -> ${WALLE_VERSION})"
     for m in "${modules[@]}"; do sync_module "$SOURCE_DIR" "$PROJECT_PATH" "$m"; done
+    sync_devcontainer "$SOURCE_DIR" "$PROJECT_PATH"
+    seed_devcontainer "$SOURCE_DIR" "$PROJECT_PATH"
     print_info "Dry-run: no files written."
     return 0
   fi
 
   print_info "Updating ${MF_NAME} (${PROJECT_PATH})..."
   for m in "${modules[@]}"; do sync_module "$SOURCE_DIR" "$PROJECT_PATH" "$m"; done
+  sync_devcontainer "$SOURCE_DIR" "$PROJECT_PATH"
+  seed_devcontainer "$SOURCE_DIR" "$PROJECT_PATH"
   write_manifest "$PROJECT_PATH" "$MF_NAME" "${modules[@]}"
   print_info "Project updated successfully."
 }

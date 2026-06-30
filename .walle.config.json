@@ -6,5 +6,5 @@
   "sourceRef": "/workspace/projects/walle-design-system",
   "modules": ["website", "ci"],
   "devcontainer": { "enabled": true },
-  "updatedAt": "2026-06-30T20:11:59Z"
+  "updatedAt": "2026-06-30T20:28:32Z"
 }
