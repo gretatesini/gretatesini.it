@@ -2,8 +2,9 @@
   "$schema": "./schemas/walle.config.schema.json",
   "schemaVersion": 2,
   "name": "gretatesini.it",
-  "walleVersion": "v0.1.0-beta",
+  "walleVersion": "local",
+  "sourceRef": "/workspace/projects/walle-design-system",
   "modules": ["website", "ci"],
   "devcontainer": { "enabled": true },
-  "updatedAt": "2026-06-29T18:39:35Z"
+  "updatedAt": "2026-06-30T20:11:59Z"
 }

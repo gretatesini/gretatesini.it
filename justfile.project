@@ -1,0 +1,7 @@
+import 'walle.justfile'
+
+# Import the local database dump
+[group('dev')]
+import:
+    chmod +x ./scripts/import-database.sh
+    ./scripts/import-database.sh

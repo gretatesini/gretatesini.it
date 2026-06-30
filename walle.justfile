@@ -1,12 +1,17 @@
 cli_filename := "./scripts/@walle/cli.sh"
 
-# Setup the project
-setup:
+# Install dependencies and validate consumer configs
+walle-setup:
     just yarn install
+    just validate-configs
 
 # Walle cli
 walle *args:
     {{cli_filename}} {{args}}
+
+# Validate the consumer against the walle manifest
+walle-check:
+    {{cli_filename}} check
 
 # Walle update design system
 walle-update *args:

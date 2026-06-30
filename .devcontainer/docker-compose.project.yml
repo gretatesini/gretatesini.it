@@ -1,0 +1,12 @@
+services:
+  devcontainer:
+    build:
+      args:
+        - GH_CLI_ENABLE=true
+        - CLAUDE_CLI_ENABLE=false
+        - OPENCODE_ENABLE=false
+        - TERRAFORM_ENABLE=false
+        - AWS_CLI_ENABLE=false
+        - KIND_ENABLE=false
+    ports:
+      - "4321:4321"

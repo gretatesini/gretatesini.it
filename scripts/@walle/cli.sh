@@ -65,8 +65,8 @@ EOF
 
 validate_module() {
   case "$1" in
-  website | ci | ai | backend | infrastructure) : ;;
-  *) print_error "unknown module '$1'. Valid modules: website, ci, ai, backend, infrastructure" ;;
+  website | ci | ai | backend | infrastructure | devcontainer) : ;;
+  *) print_error "unknown module '$1'. Valid modules: website, ci, ai, backend, infrastructure, devcontainer" ;;
   esac
 }
 
@@ -84,6 +84,7 @@ module_managed_paths() {
   ai) echo ".claude/skills/@walle" ;;
   backend) echo "" ;;
   infrastructure) echo "" ;;
+  devcontainer) echo "" ;;
   esac
 }
 
@@ -91,11 +92,12 @@ module_managed_paths() {
 # update. Source lives under seeds/<module>/<path>. Empty until a module ships scaffolding.
 module_seed_paths() {
   case "$1" in
-  website) echo "README.md" ;;
+  website) echo "README.md justfile.project" ;;
   ci) echo ".github/workflows/test.yml .github/workflows/deploy.yml" ;;
   ai) echo "" ;;
   backend) echo "src/pages/api/health.ts src/pages/api/echo.ts src/middleware.ts" ;;
   infrastructure) echo "infrastructure/main.tf infrastructure/variables.tf infrastructure/providers.tf infrastructure/outputs.tf infrastructure/README.md infrastructure/.gitignore" ;;
+  devcontainer) echo ".devcontainer/Dockerfile .devcontainer/devcontainer.json .devcontainer/docker-compose.yml .devcontainer/docker-compose.project.yml .devcontainer/scripts/setup-devcontainer.sh .devcontainer/scripts/setup-devcontainer.project.sh .devcontainer/configs/.zshrc .devcontainer/configs/.aws/.gitignore" ;;
   esac
 }
 
@@ -211,22 +213,23 @@ plan_seed_path() {
   print_plan "+ ${dst} (seed, once)"
 }
 
-# Seed .devcontainer/ at init if DEVCONTAINER_ENABLED=1 and target absent.
+# Seed full .devcontainer/ structure at init if DEVCONTAINER_ENABLED=1.
+# Each file is written only if absent — existing vscode-dev-setup files are preserved.
 seed_devcontainer() {
   local source_dir="$1" target_dir="$2"
   [ "$DEVCONTAINER_ENABLED" = "1" ] || return 0
-  local src="${source_dir}/seeds/devcontainer/.devcontainer/devcontainer.json"
-  local dst="${target_dir}/.devcontainer/devcontainer.json"
-  seed_path "$src" "$dst"
+  for rel in $(module_seed_paths "devcontainer"); do
+    seed_path "${source_dir}/seeds/devcontainer/${rel}" "${target_dir}/${rel}"
+  done
 }
 
 # Dry-run report for devcontainer seed.
 plan_devcontainer() {
   local source_dir="$1" target_dir="$2"
   [ "$DEVCONTAINER_ENABLED" = "1" ] || return 0
-  local src="${source_dir}/seeds/devcontainer/.devcontainer/devcontainer.json"
-  local dst="${target_dir}/.devcontainer/devcontainer.json"
-  plan_seed_path "$src" "$dst"
+  for rel in $(module_seed_paths "devcontainer"); do
+    plan_seed_path "${source_dir}/seeds/devcontainer/${rel}" "${target_dir}/${rel}"
+  done
 }
 
 # One-line purpose of a module, used in the generated AGENTS.md module map.

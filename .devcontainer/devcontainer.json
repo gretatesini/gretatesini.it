@@ -1,0 +1,41 @@
+{
+  "name": "gretatesini.it",
+  "dockerComposeFile": [
+    "docker-compose.yml",
+    "docker-compose.project.yml",
+    "docker-compose.local.yml"
+  ],
+  "service": "devcontainer",
+  "workspaceFolder": "/workspace",
+  "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "installOhMyZsh": true,
+      "configureZshAsDefaultShell": true,
+      "username": "devuser"
+    }
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "astro-build.astro-vscode",
+        "unifiedjs.vscode-mdx",
+        "github.vscode-pull-request-github",
+        "github.vscode-github-actions",
+        "eamodio.gitlens",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint",
+        "timonwong.shellcheck",
+        "foxundermoon.shell-format",
+        "redhat.vscode-yaml",
+        "vscode-icons-team.vscode-icons"
+      ]
+    }
+  },
+  "containerEnv": {
+    "NODE_ENV": "development"
+  },
+  "postCreateCommand": "just setup",
+  "remoteUser": "devuser",
+  "shutdownAction": "stopCompose"
+}
