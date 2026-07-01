@@ -27,6 +27,12 @@ pnpm-debug.log*
 .env.production
 *.env
 
+# three-layer local overrides (vscode-dev-setup / walle devcontainer module)
+*.local
+*.local.sh
+*.local.yml
+.vscode-dev-setup.lock
+
 # temp files
 *.tmp
 
