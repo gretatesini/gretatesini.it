@@ -250,6 +250,7 @@ module_purpose() {
   ai) echo "AI harness — this generated AGENTS.md block and @walle skills" ;;
   backend) echo "API routes (requires SSR enabled in src/configs/app.json)" ;;
   infrastructure) echo "Terraform infrastructure under infrastructure/" ;;
+  devcontainer) echo "DevContainer scaffold — opt-out at init, not tracked in modules[] (see devcontainer.enabled)" ;;
   *) echo "walle module" ;;
   esac
 }
@@ -275,6 +276,15 @@ generate_agents_block() {
     [ -n "$managed" ] && echo "  - Managed (overwritten on update — never edit): $(echo "$managed" | sed 's/ /, /g')"
     [ -n "$seed" ] && echo "  - Seeded once (yours to own and edit): $(echo "$seed" | sed 's/ /, /g')"
   done
+  # devcontainer is not in AGENTS_MODULES (it's a manifest flag, not a modules[] entry —
+  # see read_manifest) but it's just as much an active part of the consumer when enabled.
+  if [ "${DEVCONTAINER_ENABLED:-0}" = "1" ]; then
+    echo "- **devcontainer** — $(module_purpose "devcontainer")"
+    managed="$(module_managed_paths "devcontainer")"
+    seed="$(module_seed_paths "devcontainer")"
+    [ -n "$managed" ] && echo "  - Managed (overwritten on update — never edit): $(echo "$managed" | sed 's/ /, /g')"
+    [ -n "$seed" ] && echo "  - Seeded once (yours to own and edit): $(echo "$seed" | sed 's/ /, /g')"
+  fi
   echo ""
   echo "### Working with walle"
   echo ""
@@ -425,7 +435,8 @@ manifest_field() {
   node -e "const m=require('$1');process.stdout.write(String(m['$2']??''))" 2>/dev/null || true
 }
 
-# Read+validate a v2 manifest; sets MF_NAME and MF_MODULES (space-separated). Stops on v1.
+# Read+validate a v2 manifest; sets MF_NAME, MF_MODULES (space-separated) and
+# MF_DEVCONTAINER_ENABLED. Stops on v1.
 read_manifest() {
   local manifest="$1"
   [ -f "$manifest" ] || print_error "no .walle.config.json found at ${manifest}"
@@ -436,6 +447,9 @@ read_manifest() {
   MF_VERSION="$(manifest_field "$manifest" walleVersion)"
   MF_MODULES="$(node -e "const m=require('$manifest');process.stdout.write((m.modules||[]).join(' '))" 2>/dev/null)"
   [ -n "$MF_MODULES" ] || print_error "manifest declares no modules"
+  # devcontainer is tracked outside the modules array (manifest field devcontainer.enabled,
+  # default true when absent — same convention as update()'s DEVCONTAINER_ENABLED restore).
+  MF_DEVCONTAINER_ENABLED="$(node -e "try{const m=require('$manifest');process.stdout.write(m.devcontainer?.enabled!==false?'1':'0')}catch(e){process.stdout.write('1')}" 2>/dev/null || echo "1")"
 }
 
 # --- commands ----------------------------------------------------------------
@@ -566,11 +580,35 @@ add() {
   local modules=()
   read -ra modules <<<"$MF_MODULES"
 
+  # Preserve the existing devcontainer.enabled flag so adding an unrelated module never
+  # silently flips it back on (DEVCONTAINER_ENABLED otherwise defaults to 1 — see top of file).
+  DEVCONTAINER_ENABLED=$(node -e "try{const m=require('${PROJECT_PATH}/.walle.config.json');process.stdout.write(m.devcontainer?.enabled!==false?'1':'0')}catch(e){process.stdout.write('1')}" 2>/dev/null || echo "1")
+
+  resolve_source "$SOURCE_PATH" "$VERSION"
+
+  # devcontainer is a manifest flag (devcontainer.enabled), not a modules-array entry — route
+  # it through the dedicated sync/seed functions (same ones init/update use) instead of the
+  # generic sync_module, which would pull MANAGED paths from this repo's own walle-specific
+  # .devcontainer/ instead of seeds/devcontainer/.
+  if [ "$NEW_MODULE" = "devcontainer" ]; then
+    DEVCONTAINER_ENABLED=1
+    if [ "$DRY_RUN" = "1" ]; then
+      print_plan "add plan: devcontainer for '${MF_NAME}'"
+      sync_devcontainer "$SOURCE_DIR" "$PROJECT_PATH"
+      seed_devcontainer "$SOURCE_DIR" "$PROJECT_PATH"
+      print_info "Dry-run: no files written."
+      return 0
+    fi
+    sync_devcontainer "$SOURCE_DIR" "$PROJECT_PATH"
+    seed_devcontainer "$SOURCE_DIR" "$PROJECT_PATH"
+    write_manifest "$PROJECT_PATH" "$MF_NAME" "${modules[@]}"
+    print_info "devcontainer added to ${MF_NAME}."
+    return 0
+  fi
+
   local present=0 m
   for m in "${modules[@]}"; do [ "$m" = "$NEW_MODULE" ] && present=1; done
   [ "$present" = "1" ] && print_info "module '${NEW_MODULE}' already declared — re-syncing."
-
-  resolve_source "$SOURCE_PATH" "$VERSION"
 
   if [ "$DRY_RUN" = "1" ]; then
     print_plan "add plan: module '${NEW_MODULE}' for '${MF_NAME}'"
@@ -593,13 +631,14 @@ print_module_catalog() {
   echo ""
   echo "Available modules:"
   local m
-  for m in website ci backend infrastructure ai; do
+  for m in website ci backend infrastructure ai devcontainer; do
     local managed seed purpose
     managed="$(module_managed_paths "$m")"
     seed="$(module_seed_paths "$m")"
     purpose="$(module_purpose "$m")"
     local required=""
     [ "$m" = "website" ] && required=" (required)"
+    [ "$m" = "devcontainer" ] && required=" (opt-out, default on)"
     echo "  ${m}${required} — ${purpose}"
     [ -n "$managed" ] && echo "    MANAGED : $(echo "$managed" | sed 's/ /, /g')"
     [ -n "$seed" ]    && echo "    SEED    : $(echo "$seed" | sed 's/ /, /g')"
@@ -683,6 +722,19 @@ check() {
       fi
     done
   done
+
+  # devcontainer is opt-in but not part of MF_MODULES (see read_manifest) — check its SEED
+  # paths separately. Unlike the generic SEED loop above, a missing path here is a real warn:
+  # these are written at init when enabled, so absence usually means something was deleted.
+  if [ "$MF_DEVCONTAINER_ENABLED" = "1" ]; then
+    for _rel in $(module_seed_paths "devcontainer"); do
+      if [ -e "${PROJECT_PATH}/${_rel}" ]; then
+        print_info "· seed present (devcontainer): ${_rel}"
+      else
+        print_warn "· seed missing (devcontainer): ${_rel} — run: cli.sh add devcontainer"
+      fi
+    done
+  fi
 
   # Backend API routes need SSR — warn if the module is active but SSR is off.
   case " $MF_MODULES " in
