@@ -1,4 +1,5 @@
 {
+  "$schema": "../../walle/schemas/app.schema.json",
   "website": {
     "title": "Greta Tesini",
     "description": "Copywriter",

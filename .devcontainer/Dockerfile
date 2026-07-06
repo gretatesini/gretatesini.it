@@ -1,4 +1,4 @@
-# [vscode-dev-setup:START]
+# [harness-coding:START]
 ARG DEVCONTAINER_VERSION=trixie
 ARG UV_VERSION=latest
 ARG NODE_VERSION=24
@@ -11,8 +11,10 @@ FROM mcr.microsoft.com/devcontainers/base:${DEVCONTAINER_VERSION} AS base
 
 USER root
 
-# Docker BuildKit populates TARGETARCH (amd64|arm64) and TARGETOS (linux) at build time
-ARG TARGETARCH=arm64
+# Docker BuildKit populates TARGETARCH (amd64|arm64) and TARGETOS (linux) at build time.
+# No fixed default here: RUN steps that need it derive a fallback from the builder's
+# own architecture via `dpkg --print-architecture` when BuildKit doesn't populate it.
+ARG TARGETARCH
 ARG TARGETOS=linux
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -31,8 +33,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pciutils \
     hyperfine \
     unzip \
+    && arch="${TARGETARCH:-$(dpkg --print-architecture)}" \
     && wget -qO /usr/local/bin/yq \
-        "https://github.com/mikefarah/yq/releases/latest/download/yq_${TARGETOS}_${TARGETARCH}" \
+        "https://github.com/mikefarah/yq/releases/latest/download/yq_${TARGETOS}_${arch}" \
     && chmod +x /usr/local/bin/yq \
     && rm -rf /var/lib/apt/lists/*
 
@@ -54,14 +57,47 @@ RUN ln -sf /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm \
     && ln -sf /usr/local/lib/node_modules/npm/bin/npx-cli.js /usr/local/bin/npx \
     && ln -sf /usr/local/lib/node_modules/corepack/dist/corepack.js /usr/local/bin/corepack
 
+# [USER] Create devuser with host-matching UID/GID and passwordless sudo.
+# Created here (end of base stage), before any optional tool installs in the
+# `tools` stage, so those installs can target this user directly instead of a
+# final `chown -R` over shared system paths.
+ARG USER_NAME=devuser
+ARG USER_GROUP=devuser
+ARG USER_UID=1000
+ARG USER_GID=1000
+
+RUN set -eux; \
+    existing_group="$(getent group "${USER_GID}" | cut -d: -f1 || true)"; \
+    if [ -z "${existing_group}" ]; then \
+        groupadd -g "${USER_GID}" "${USER_GROUP}"; \
+    elif [ "${existing_group}" != "${USER_GROUP}" ]; then \
+        groupmod -n "${USER_GROUP}" "${existing_group}"; \
+    fi; \
+    existing_user="$(getent passwd "${USER_UID}" | cut -d: -f1 || true)"; \
+    if [ -z "${existing_user}" ]; then \
+        useradd -u "${USER_UID}" -g "${USER_GID}" -m -s /bin/zsh "${USER_NAME}"; \
+    elif [ "${existing_user}" != "${USER_NAME}" ]; then \
+        usermod -l "${USER_NAME}" -g "${USER_GID}" -d /home/"${USER_NAME}" -m "${existing_user}"; \
+    fi; \
+    usermod -s /bin/zsh "${USER_NAME}"; \
+    echo "${USER_NAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/"${USER_NAME}"; \
+    chmod 0440 /etc/sudoers.d/"${USER_NAME}"; \
+    chown -R "${USER_NAME}":"${USER_GROUP}" /home/"${USER_NAME}"
+
+ENV PATH=/home/${USER_NAME}/.local/bin:$PATH
+
 # ── Tools stage: optional ARG-gated tools ────────────────────────────────────
 FROM base AS tools
 
 USER root
 
 # Redeclare platform args each stage has its own scope in Docker BuildKit
-ARG TARGETARCH=arm64
+ARG TARGETARCH
 ARG TARGETOS=linux
+
+# Redeclare user args each stage has its own scope in Docker BuildKit
+ARG USER_NAME=devuser
+ARG USER_GROUP=devuser
 
 ## [TOOLS] Enable or disable tools with build args
 ARG CLAUDE_CLI_ENABLE=false
@@ -101,10 +137,11 @@ RUN if [ "$GH_CLI_ENABLE" = "true" ]; then \
 # [INSTALL] AWS CLI
 # TARGETARCH amd64→x86_64, arm64→aarch64
 RUN if [ "$AWS_CLI_ENABLE" = "true" ]; then \
-        case "${TARGETARCH}" in \
+        arch="${TARGETARCH:-$(dpkg --print-architecture)}" && \
+        case "${arch}" in \
             amd64)  AWS_ARCH="x86_64" ;; \
             arm64)  AWS_ARCH="aarch64" ;; \
-            *)      echo "[ERROR] Unsupported arch: ${TARGETARCH}" >&2; exit 1 ;; \
+            *)      echo "[ERROR] Unsupported arch: ${arch}" >&2; exit 1 ;; \
         esac && \
         curl -fsSL "https://awscli.amazonaws.com/awscli-exe-${TARGETOS}-${AWS_ARCH}.zip" \
             -o /tmp/awscliv2.zip \
@@ -114,30 +151,32 @@ RUN if [ "$AWS_CLI_ENABLE" = "true" ]; then \
     fi
 # ---
 
-# [INSTALL] Claude CLI
-# The installer targets $HOME (/root, mode 700): relocate to /opt and expose
-# via /usr/local/bin so the runtime non-root user can execute it.
+# [INSTALL] Claude Code, GitHub Copilot CLI, OpenCode, OpenSpec
+# All four are self-updating and install into ${USER_NAME}'s home as that
+# user: Claude/Copilot/OpenCode's own installers target $HOME directly
+# (binaries land in ~/.local/bin, already on PATH); OpenSpec is an npm global
+# install, so npm's default prefix (/usr/local, root-owned from the base
+# stage COPY) is repointed to ~/.local — npm's own documented fix for global
+# installs without sudo (https://docs.npmjs.com/resolving-eacces-permissions-errors-when-installing-packages-globally),
+# landing in the same ~/.local/bin as everything else. No /opt relocation, no
+# chown -R anywhere — `claude update`/`copilot update`/`opencode
+# upgrade`/`openspec update` all work natively as devuser at runtime.
+ARG OPENSPEC_VERSION=latest
+ENV NPM_CONFIG_PREFIX=/home/${USER_NAME}/.local
+USER ${USER_NAME}
+ENV HOME=/home/${USER_NAME}
+
 RUN if [ "$CLAUDE_CLI_ENABLE" = "true" ]; then \
         for i in 1 2 3; do \
             curl -fsSL https://claude.ai/install.sh | bash && break; \
             echo "[WARN] Claude CLI install attempt ${i}/3 failed, retrying in 10s..."; \
             sleep 10; \
         done; \
-        if [ -e /root/.local/bin/claude ]; then \
-            mkdir -p /opt/claude \
-            && CLAUDE_VERSION_BIN="$(readlink -f /root/.local/bin/claude)" \
-            && mv /root/.local/share/claude /opt/claude/share \
-            && ln -sf "/opt/claude/share/versions/$(basename "${CLAUDE_VERSION_BIN}")" /usr/local/bin/claude \
-            && chmod -R a+rX /opt/claude \
-            && rm -f /root/.local/bin/claude \
-            && claude --version; \
-        else \
-            echo "[WARN] Claude CLI not installed after 3 attempts"; \
-        fi; \
+        command -v claude >/dev/null 2>&1 && claude --version \
+        || { echo "[ERROR] Claude CLI not found after install" >&2; exit 1; }; \
     fi
 # ---
 
-# [INSTALL] GitHub Copilot CLI
 RUN if [ "$GITHUB_COPILOT_CLI_ENABLE" = "true" ]; then \
         for i in 1 2 3; do \
             curl -fsSL https://gh.io/copilot-install | bash && break; \
@@ -145,43 +184,43 @@ RUN if [ "$GITHUB_COPILOT_CLI_ENABLE" = "true" ]; then \
             sleep 10; \
         done; \
         command -v copilot >/dev/null 2>&1 \
-            || echo "[WARN] Copilot CLI not installed after 3 attempts"; \
+        || { echo "[ERROR] Copilot CLI not found after install" >&2; exit 1; }; \
     fi
 # ---
 
-# [INSTALL] OpenCode
-# The installer hardcodes $HOME/.opencode/bin: move the binary to
-# /usr/local/bin so the runtime non-root user can execute it.
+# The installer places the binary at ~/.opencode/bin/opencode and only wires
+# $PATH into ~/.zshrc (not sourced in a non-interactive RUN): symlink into
+# ~/.local/bin so `opencode` resolves here and at runtime alike.
 RUN if [ "$OPENCODE_ENABLE" = "true" ]; then \
         for i in 1 2 3; do \
             curl -fsSL https://opencode.ai/install | bash && break; \
             echo "[WARN] OpenCode install attempt ${i}/3 failed, retrying in 10s..."; \
             sleep 10; \
         done; \
-        if [ -e /root/.opencode/bin/opencode ]; then \
-            mv /root/.opencode/bin/opencode /usr/local/bin/opencode \
-            && chmod 755 /usr/local/bin/opencode \
-            && opencode --version; \
-        else \
-            echo "[WARN] OpenCode not installed after 3 attempts"; \
-        fi; \
+        mkdir -p "$HOME/.local/bin" \
+        && ln -sf "$HOME/.opencode/bin/opencode" "$HOME/.local/bin/opencode" \
+        && command -v opencode >/dev/null 2>&1 \
+        || { echo "[ERROR] OpenCode not found after install" >&2; exit 1; }; \
     fi
 # ---
 
-# [INSTALL] OpenSpec
-ARG OPENSPEC_VERSION=latest
 RUN if [ "$OPENSPEC_ENABLE" = "true" ]; then \
-        npm install -g @fission-ai/openspec@${OPENSPEC_VERSION}; \
+        npm install -g "@fission-ai/openspec@${OPENSPEC_VERSION}" \
+        && command -v openspec >/dev/null 2>&1 \
+        || { echo "[ERROR] OpenSpec CLI not found after install" >&2; exit 1; }; \
     fi
 # ---
+
+USER root
 
 # [INSTALL] Kind
 # TARGETARCH matches Kind's naming directly (amd64, arm64)
 ARG KIND_VERSION="v0.31.0"
 RUN if [ "$KIND_ENABLE" = "true" ]; then \
+        arch="${TARGETARCH:-$(dpkg --print-architecture)}" && \
         apt-get update && apt-get install -y --no-install-recommends kubectx \
         && curl -fsSL \
-            "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-${TARGETOS}-${TARGETARCH}" \
+            "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-${TARGETOS}-${arch}" \
             -o /usr/local/bin/kind \
         && chmod +x /usr/local/bin/kind \
         && rm -rf /var/lib/apt/lists/*; \
@@ -192,13 +231,9 @@ RUN if [ "$KIND_ENABLE" = "true" ]; then \
 ARG LLAMA_CPP_HOME=/opt/llama.cpp
 ARG LLAMA_CPP_REF=master
 # Paths must live in the runtime user's home (mounted volume), not /root
-ARG LLAMA_ROOT=/home/devuser/.llama
-ARG LLAMA_CACHE=/home/devuser/.llama/cache
-ARG LLAMA_MODELS=/home/devuser/.llama/models
-
-ENV LLAMA_ROOT=${LLAMA_ROOT}
-ENV LLAMA_CACHE=${LLAMA_CACHE}
-ENV LLAMA_MODELS=${LLAMA_MODELS}
+ENV LLAMA_ROOT=/home/${USER_NAME}/.llama
+ENV LLAMA_CACHE=/home/${USER_NAME}/.llama/cache
+ENV LLAMA_MODELS=/home/${USER_NAME}/.llama/models
 
 RUN if [ "$LLAMA_CPP_ENABLE" = "true" ]; then \
         git clone --depth 1 --branch "${LLAMA_CPP_REF}" \
@@ -209,7 +244,8 @@ RUN if [ "$LLAMA_CPP_ENABLE" = "true" ]; then \
             -j"$(nproc)" --target llama-cli llama-server \
         && ln -sf "${LLAMA_CPP_HOME}/build/bin/llama-cli" /usr/local/bin/llama-cli \
         && ln -sf "${LLAMA_CPP_HOME}/build/bin/llama-server" /usr/local/bin/llama-server \
-        && mkdir -p "${LLAMA_ROOT}" "${LLAMA_CACHE}" "${LLAMA_MODELS}"; \
+        && mkdir -p "${LLAMA_ROOT}" "${LLAMA_CACHE}" "${LLAMA_MODELS}" \
+        && chown -R "${USER_NAME}":"${USER_GROUP}" "${LLAMA_ROOT}"; \
     fi
 # ---
 
@@ -219,49 +255,14 @@ RUN if [ "$TERRAFORM_ENABLE" = "true" ]; then \
         && ln -sf "${TFENV_ROOT}/bin/tfenv"     /usr/local/bin/tfenv \
         && ln -sf "${TFENV_ROOT}/bin/terraform" /usr/local/bin/terraform \
         && tfenv install "${TERRAFORM_VERSION}" \
-        && tfenv use     "${TERRAFORM_VERSION}"; \
+        && tfenv use     "${TERRAFORM_VERSION}" \
+        && chown -R "${USER_NAME}":"${USER_GROUP}" "${TFENV_ROOT}"; \
     fi
 # ---
 
-# [USER] Create devuser with host-matching UID/GID and passwordless sudo
-ARG USER_NAME=devuser
-ARG USER_GROUP=devuser
-ARG USER_UID=1000
-ARG USER_GID=1000
+USER ${USER_NAME}
+# [harness-coding:END]
 
-RUN set -eux; \
-    existing_group="$(getent group "${USER_GID}" | cut -d: -f1 || true)"; \
-    if [ -z "${existing_group}" ]; then \
-        groupadd -g "${USER_GID}" devuser; \
-    elif [ "${existing_group}" != "${USER_GROUP}" ]; then \
-        groupmod -n "${USER_GROUP}" "${existing_group}"; \
-    fi; \
-    existing_user="$(getent passwd "${USER_UID}" | cut -d: -f1 || true)"; \
-    if [ -z "${existing_user}" ]; then \
-        useradd -u "${USER_UID}" -g "${USER_GID}" -m -s /bin/zsh "${USER_NAME}"; \
-    elif [ "${existing_user}" != "${USER_NAME}" ]; then \
-        usermod -l "${USER_NAME}" -g "${USER_GID}" -d /home/"${USER_NAME}" -m "${existing_user}"; \
-    fi; \
-    usermod -s /bin/zsh "${USER_NAME}"; \
-    echo "${USER_NAME} ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/"${USER_NAME}"; \
-    chmod 0440 /etc/sudoers.d/"${USER_NAME}"; \
-    chown -R "${USER_NAME}":"${USER_GROUP}" /home/"${USER_NAME}"; \
-    mkdir -p /usr/local/lib/node_modules; \
-    chown -R "${USER_NAME}":"${USER_GROUP}" /usr/local/lib/node_modules; \
-    chown -R "${USER_NAME}":"${USER_GROUP}" /usr/local/bin; \
-    if [ -d "${TFENV_ROOT}" ]; then \
-        chown -R "${USER_NAME}":"${USER_GROUP}" "${TFENV_ROOT}"; \
-    fi
-
-ENV PATH=/home/"${USER_NAME}"/.local/bin:$PATH
-# ---
-# [vscode-dev-setup:END]
-
-# ── Walle stage: design system tooling ───────────────────────────────────────
-FROM tools AS vscode
-
-USER root
-
-COPY --from=ghcr.io/opentofu/opentofu:minimal /usr/local/bin/tofu /usr/local/bin/tofu
-
-WORKDIR /workspace
+# ── Your stage: add your own packages, tools, and configuration ───────────────
+# This section is never touched by the template.
+FROM tools AS workspace

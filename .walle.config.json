@@ -1,9 +1,0 @@
-{
-  "$schema": "./schemas/walle.config.schema.json",
-  "schemaVersion": 2,
-  "name": "gretatesini.it",
-  "walleVersion": "v0.1.0",
-  "modules": ["website", "ci"],
-  "devcontainer": { "enabled": true },
-  "updatedAt": "2026-07-01T21:24:39Z"
-}

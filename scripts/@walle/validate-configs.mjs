@@ -1,18 +1,23 @@
 #!/usr/bin/env node
 // Validates the consumer config files in src/configs/ against the JSON Schemas in schemas/.
-// Run from the project root (e.g. `just validate-configs`).
+// Run from the project root (e.g. `just validate-configs`). Consumers keep the default
+// schemas/ location; the walle repo itself dogfoods with --schemas-dir walle/schemas.
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import process from "node:process";
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
 
+const flagIndex = process.argv.indexOf("--schemas-dir");
+const schemasDir =
+  (flagIndex !== -1 && process.argv[flagIndex + 1]) || process.env.WALLE_SCHEMAS_DIR || "schemas";
+
 const root = process.cwd();
 const pairs = [
-  { config: "src/configs/app.json", schema: "schemas/app.schema.json", required: true },
-  { config: "src/configs/navbar.json", schema: "schemas/navbar.schema.json", required: true },
-  { config: "src/configs/footer.json", schema: "schemas/footer.schema.json", required: true },
-  { config: "src/configs/theme.json", schema: "schemas/theme.schema.json", required: false },
+  { config: "src/configs/app.json", schema: `${schemasDir}/app.schema.json`, required: true },
+  { config: "src/configs/navbar.json", schema: `${schemasDir}/navbar.schema.json`, required: true },
+  { config: "src/configs/footer.json", schema: `${schemasDir}/footer.schema.json`, required: true },
+  { config: "src/configs/theme.json", schema: `${schemasDir}/theme.schema.json`, required: false },
 ];
 
 const ajv = new Ajv({ allErrors: true, strict: false });

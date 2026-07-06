@@ -15,29 +15,36 @@ inputs:
     description: "Custom domain for GitHub Pages"
     required: false
     default: ""
+  working_dir:
+    description: "Website working dir"
+    required: false
+    default: "."
 
 runs:
   using: "composite"
   steps:
     - name: Checkout your repository using git
       uses: actions/checkout@v7
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version-file: .nvmrc
-    - name: Install dependencies
+    # Must run before setup-node's cache: yarn — see comment in website-tests/action.yml.
+    - name: Enable Corepack
       shell: bash
+      run: corepack enable
+    - name: Set up Node.js
+      uses: actions/setup-node@v6
+      with:
+        node-version-file: ${{ inputs.working_dir }}/.nvmrc
+        cache: yarn
+        cache-dependency-path: ${{ inputs.working_dir }}
+    - name: Install & Build
+      shell: bash
+      working-directory: ${{ inputs.working_dir }}
       run: |
-        corepack enable
         corepack prepare --activate
         yarn install --immutable
-    - name: Build Astro site
-      shell: bash
-      run: |
         yarn build
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v4
       with:
         github_token: ${{ inputs.token }}
-        publish_dir: ${{ inputs.publish_dir }}
+        publish_dir: ${{ inputs.working_dir }}/${{ inputs.publish_dir }}
         cname: ${{ inputs.cname }}

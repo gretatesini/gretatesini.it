@@ -1,10 +1,26 @@
 # AGENTS.md
 
-<!-- [vscode-dev-setup:START] managed by vscode-dev-setup template, do not edit manually -->
+## Project-specific context
 
-This repository was bootstrapped from the [vscode-dev-setup](https://github.com/FabrizioCafolla/vscode-dev-setup) template.
+<!-- TODO: Add anything specific to this project that an AI agent should know.
+     This is the most important section to fill in when using this template.
 
-The `vscode-dev-setup-cli.sh` script keeps template-managed files in sync with upstream. Run `./vscode-dev-setup-cli.sh check` to see what changed, and `./vscode-dev-setup-cli.sh update` to apply updates.
+Suggested content:
+- Architecture overview or diagram reference
+- Key files and their purpose
+- Known limitations or areas to avoid
+- External dependencies (APIs, databases, services)
+- Links to internal documentation or runbooks
+- Ongoing work or areas under active development
+-->
+
+---
+
+<!-- [harness-coding:START] managed by harness-coding template, do not edit manually -->
+
+This repository was bootstrapped from the [harness-coding](https://github.com/FabrizioCafolla/harness-coding) template.
+
+Template-managed files are kept in sync with upstream via `just harness-coding check` / `just harness-coding update` — `cli.sh` is never vendored locally, it's always fetched fresh from `main`.
 
 Instructions and context for AI agents (Claude Code, GitHub Copilot, etc.) working in this repository.
 
@@ -26,13 +42,13 @@ The second stage (`tools`) is where all **optional tools** live. Each tool is ga
 
 ## Development environment
 
-All work happens inside the DevContainer. Do not assume tools are installed on the host machine. The container starts via `just setup`, which is triggered automatically by `postStartCommand`. SSH keys are mounted read-only from the host. AWS configuration lives in `.devcontainer/configs/.aws/`, and AI tool caches (Claude, Copilot) are persisted in `.devcontainer/cache/`.
+All work happens inside the DevContainer. Do not assume tools are installed on the host machine. The container builds run `harnessai install` (`postCreateCommand`); every start runs `harnessai sync && just setup` (`postStartCommand`). AWS configuration lives in `.devcontainer/configs/.aws/`, and AI tool caches (Claude, Copilot, OpenCode, LLaMA) are persisted in `.devcontainer/cache/`.
 
 ### Three-layer file organization
 
 This project follows a **three-layer model** for configuration:
 
-1. **BASE** (template-managed, auto-updated): `docker-compose.yml`, `setup-devcontainer.sh`, `justfile` — updated when you run `update-devcontainer.sh`
+1. **BASE** (template-managed, auto-updated): `docker-compose.yml`, `setup-devcontainer.sh`, `justfile`, `justfile.tooling` — updated when you run `just harness-coding update`
 2. **PROJECT** (versionated, `.project` files): Shared defaults for all team members — `justfile.project`, `setup-devcontainer.project.sh`, `docker-compose.project.yml`, `.env.project`
 3. **LOCAL** (dev-specific, `.local` files, gitignored): Personal customizations that are never committed — `justfile.local`, `setup-devcontainer.local.sh`, `docker-compose.local.yml`, `.env`
 
@@ -44,7 +60,7 @@ This project follows a **three-layer model** for configuration:
 
 **Examples:**
 
-- `justfile` (base) defines common commands, then `import? 'justfile.project'` optionally loads project defaults, then `import? 'justfile.local'` optionally loads local commands
+- `justfile` (base, marker-managed) imports `justfile.project`, `justfile.local`, `justfile.tooling`, `justfile.private`
 - `docker-compose.yml` (base) + `docker-compose.project.yml` (project) + `docker-compose.local.yml` (local) merge via Compose
 - `.env.project` (versionated, project defaults) + `.env` (gitignored, local overrides) are both loaded at container startup
 
@@ -61,18 +77,47 @@ just help
 - Do edit `.local` files for personal/local customizations — these are gitignored and won't be committed
 - Do not install packages globally inside the container without updating the Dockerfile or devcontainer features
 
-<!-- [vscode-dev-setup:END] -->
+<!-- [harness-coding:END] -->
 
-## Project-specific context
+<!-- [walle:START] -->
 
-<!-- TODO: Add anything specific to this project that an AI agent should know.
-     This is the most important section to fill in when using this template.
+## Walle design system (managed block)
 
-Suggested content:
-- Architecture overview or diagram reference
-- Key files and their purpose
-- Known limitations or areas to avoid
-- External dependencies (APIs, databases, services)
-- Links to internal documentation or runbooks
-- Ongoing work or areas under active development
--->
+This project uses the [Walle](https://github.com/FabrizioCafolla/harness-walle)
+design system. The `@walle/` namespaces are **read-only**: they are overwritten on every
+`just walle-update`. Customize through the consumer zones only.
+
+- **Consumer zones (never overwritten):** `src/configs/`, `src/styles/global.css`,
+  `src/components/`, `src/pages/`, `src/content/`, `astro.config.mjs`, `package.json`,
+  `.vscode/`.
+- **Config:** edit `src/configs/*.json` (validated by `just validate-configs`). `app.json`
+  drives metadata, the optional `astro.ssr` flag, and component variants; `theme.json` holds
+  design tokens.
+- **Astro config:** `astro.config.mjs` is a thin `defineWalleConfig({})` shell — pass native
+  Astro overrides there (scalars override, `integrations` merge additively).
+- **Updates:** run `just walle-update`. Only the declared modules' `@walle/` paths are synced;
+  this managed block is rewritten in place between its markers.
+
+Do not edit files inside `@walle/` directories, and do not edit the content between the
+`[walle:START]` / `[walle:END]` markers by hand — both are regenerated on update.
+
+### Active walle modules
+
+- **website** — Astro site — @walle components, layouts, styles, config and CLI scripts
+  - Managed: src/@walle, schemas, scripts/@walle, scripts/@walle/walle.yml
+- **ai** — AI harness — generated AGENTS.md block and @walle skills
+  - Managed: .claude/skills/@walle
+- **ci** — GitHub Actions workflows (test + deploy) under @walle
+  - Managed: .github/workflows/actions/@walle
+  - Seeded once: .github/workflows/test.yml, .github/workflows/deploy.yml
+- **harness-coding** — Harness coding scaffold
+  - Seeded once: justfile.project, .husky/pre-commit, .husky/pre-push, .devcontainer/docker-compose.project.yml
+
+### Working with walle
+
+- Managed `@walle/` zones are regenerated by the CLI.
+- Update: `just walle-update`.
+- Add: `just walle add <module>`.
+- Validate: `just walle-check`.
+
+<!-- [walle:END] -->

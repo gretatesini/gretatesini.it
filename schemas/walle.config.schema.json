@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://walle.dev/schemas/walle.config.schema.json",
-  "title": "Walle consumer manifest (.walle.config.json)",
+  "title": "Walle consumer manifest (.walle/manifest.json)",
   "version": "2.0.0",
   "type": "object",
   "additionalProperties": false,
@@ -53,6 +53,16 @@
           "default": true,
           "description": "Seed a .devcontainer/ scaffold at init. Default: true."
         }
+      }
+    },
+    "files": {
+      "type": "object",
+      "description": "Every path walle wrote, grouped by class then keyed by dest path → module.",
+      "additionalProperties": false,
+      "properties": {
+        "managed": { "type": "object", "additionalProperties": { "type": "string" } },
+        "seed": { "type": "object", "additionalProperties": { "type": "string" } },
+        "inject": { "type": "object", "additionalProperties": { "type": "string" } }
       }
     }
   },

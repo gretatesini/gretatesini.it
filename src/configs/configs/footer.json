@@ -1,0 +1,20 @@
+{
+  "logo": {
+    "title": "Greta Tesini",
+    "url": "/"
+  },
+  "items": [
+    {
+      "name": "Privacy Policy",
+      "url": "/privacy-policy"
+    },
+    {
+      "name": "Terms & Conditions",
+      "url": "/terms-and-conditions"
+    },
+    {
+      "icon": "fa:linkedin",
+      "url": "https://www.linkedin.com/in/greta-tesini/"
+    }
+  ]
+}

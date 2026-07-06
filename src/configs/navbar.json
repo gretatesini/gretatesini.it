@@ -1,4 +1,5 @@
 {
+  "$schema": "../../walle/schemas/navbar.schema.json",
   "logo": {
     "title": "Greta Tesini",
     "url": "/",

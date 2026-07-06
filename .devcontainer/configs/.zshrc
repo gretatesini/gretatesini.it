@@ -1,3 +1,4 @@
+# [harness-coding:START]
 # Setup fpath for completions BEFORE compinit
 fpath=(
   ~/.zsh/completions
@@ -63,3 +64,7 @@ zstyle ':completion:*' matcher-list 'm:{a-z}={A-Za-z}'
 zstyle ':completion:*' menu select
 
 zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+# [harness-coding:END]
+
+# ── Your customizations: add anything below this line ─────────────────────────
+# This section is never touched by the template update script.

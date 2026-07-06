@@ -1,0 +1,16 @@
+{
+  "website": {
+    "title": "Greta Tesini",
+    "description": "Copywriter",
+    "favicon": "/images/profile.jpeg",
+    "image": "/images/banner.png",
+    "robots": "index, follow",
+    "language": "it-IT"
+  },
+  "astro": {
+    "baseUrl": "https://gretatesini.it",
+    "basePath": "/",
+    "trailingSlash": "never",
+    "analyticsScriptContent": ""
+  }
+}

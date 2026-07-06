@@ -1,3 +1,5 @@
+# Consumer-owned CI workflow (walle SEED): created once, never overwritten by `walle update`.
+# Edit freely. The reusable deploy logic lives in the walle-managed composite action below.
 name: Deploy
 
 on:
@@ -16,6 +18,7 @@ jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-22.04
+    timeout-minutes: 10
     steps:
       - name: Check out code
         uses: actions/checkout@v5
